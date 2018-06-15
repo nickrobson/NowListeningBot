@@ -1,11 +1,14 @@
-package xyz.nickr.telegram.nowplayingbot;
+package xyz.nickr.telegram.nowlistening.spotify;
 
 import com.google.gson.JsonObject;
 import com.wrapper.spotify.SpotifyApi;
+import com.wrapper.spotify.model_objects.credentials.AuthorizationCodeCredentials;
 import java.net.URI;
 import java.sql.SQLException;
+import java.time.Instant;
 import java.util.UUID;
-import xyz.nickr.telegram.nowplayingbot.db.DatabaseController;
+import xyz.nickr.telegram.nowlistening.db.DatabaseController;
+import xyz.nickr.telegram.nowlistening.db.SpotifyUser;
 
 public class SpotifyController {
 
@@ -40,5 +43,20 @@ public class SpotifyController {
                 .show_dialog(true)
                 .build()
                 .execute();
+    }
+
+    public void updateSpotifyUser(long telegramUserId, AuthorizationCodeCredentials credentials) throws SQLException {
+        SpotifyUser spotifyUser = databaseController.getSpotifyUser(telegramUserId)
+                .orElseGet(() -> SpotifyUser.builder().build());
+
+        spotifyUser = spotifyUser
+                .withTelegramUserId(telegramUserId)
+                .withAccessToken(credentials.getAccessToken())
+                .withRefreshToken(credentials.getRefreshToken() != null ? credentials.getRefreshToken() : spotifyUser.getRefreshToken())
+                .withTokenType(credentials.getTokenType())
+                .withScope(credentials.getScope())
+                .withExpiryDate(Instant.now().getEpochSecond() + credentials.getExpiresIn());
+
+        databaseController.updateSpotifyUser(spotifyUser);
     }
 }

@@ -1,21 +1,15 @@
-package xyz.nickr.telegram.nowplayingbot.db;
+package xyz.nickr.telegram.nowlistening.db;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.ToString;
+import lombok.Data;
 import lombok.experimental.Wither;
 
 /**
  * @author Nick Robson
  */
-@Getter
+@Data
 @Wither
 @Builder
-@ToString
-@EqualsAndHashCode
-@AllArgsConstructor
 public class NowListeningMessage {
 
     private final long telegramUserId;

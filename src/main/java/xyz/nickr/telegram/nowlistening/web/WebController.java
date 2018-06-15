@@ -1,11 +1,11 @@
-package xyz.nickr.telegram.nowplayingbot.web;
+package xyz.nickr.telegram.nowlistening.web;
 
 import com.google.gson.JsonObject;
 import java.io.IOException;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.grizzly.http.server.ServerConfiguration;
-import xyz.nickr.telegram.nowplayingbot.SpotifyController;
-import xyz.nickr.telegram.nowplayingbot.db.DatabaseController;
+import xyz.nickr.telegram.nowlistening.spotify.SpotifyController;
+import xyz.nickr.telegram.nowlistening.db.DatabaseController;
 
 /**
  * @author Nick Robson
@@ -14,8 +14,8 @@ public class WebController {
 
     private final HttpServer server;
 
-    public WebController(JsonObject config, SpotifyController spotifyController, DatabaseController databaseController) {
-        JsonObject web = config.getAsJsonObject("web");
+    public WebController(JsonObject config, DatabaseController databaseController, SpotifyController spotifyController) {
+        JsonObject web = config.getAsJsonObject("webserver");
         int port = web.getAsJsonPrimitive("port").getAsInt();
 
         this.server = HttpServer.createSimpleServer(null, port);

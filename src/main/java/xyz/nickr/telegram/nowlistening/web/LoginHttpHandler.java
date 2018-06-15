@@ -1,17 +1,14 @@
-package xyz.nickr.telegram.nowplayingbot.web;
+package xyz.nickr.telegram.nowlistening.web;
 
 import com.wrapper.spotify.model_objects.credentials.AuthorizationCodeCredentials;
-import com.wrapper.spotify.requests.authorization.authorization_code.AuthorizationCodeRequest;
-import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.glassfish.grizzly.http.server.HttpHandler;
 import org.glassfish.grizzly.http.server.Request;
 import org.glassfish.grizzly.http.server.Response;
 import org.glassfish.grizzly.http.util.HttpStatus;
-import xyz.nickr.telegram.nowplayingbot.SpotifyController;
-import xyz.nickr.telegram.nowplayingbot.db.DatabaseController;
-import xyz.nickr.telegram.nowplayingbot.db.SpotifyUser;
+import xyz.nickr.telegram.nowlistening.spotify.SpotifyController;
+import xyz.nickr.telegram.nowlistening.db.DatabaseController;
 
 /**
  * @author Nick Robson
@@ -52,21 +49,12 @@ public class LoginHttpHandler extends HttpHandler {
         }
 
         if (code != null) {
-            AuthorizationCodeRequest codeRequest = spotifyController.getApi()
+            AuthorizationCodeCredentials credentials = spotifyController.getApi()
                     .authorizationCode(code)
-                    .build();
-            AuthorizationCodeCredentials credentials = codeRequest.execute();
+                    .build()
+                    .execute();
 
-            SpotifyUser spotifyUser = databaseController.getSpotifyUser(telegramUserId)
-                    .orElseGet(() -> SpotifyUser.builder().build())
-                    .withTelegramUserId(telegramUserId)
-                    .withAccessToken(credentials.getAccessToken())
-                    .withRefreshToken(credentials.getRefreshToken())
-                    .withTokenType(credentials.getTokenType())
-                    .withScope(credentials.getScope())
-                    .withExpiryDate(Instant.now().getEpochSecond() + credentials.getExpiresIn());
-
-            databaseController.updateSpotifyUser(spotifyUser);
+            spotifyController.updateSpotifyUser(telegramUserId, credentials);
 
             response.setStatus(HttpStatus.OK_200);
             response.getWriter().write("Hey look, it worked!");
