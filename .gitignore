@@ -1,0 +1,10 @@
+/config.json
+*.db
+
+*.class
+*.jar
+*.iml
+
+/.idea/
+/target/
+/out/
