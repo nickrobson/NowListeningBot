@@ -6,9 +6,10 @@ import java.util.UUID;
 import org.glassfish.grizzly.http.server.HttpHandler;
 import org.glassfish.grizzly.http.server.Request;
 import org.glassfish.grizzly.http.server.Response;
+import org.glassfish.grizzly.http.util.ContentType;
 import org.glassfish.grizzly.http.util.HttpStatus;
-import xyz.nickr.telegram.nowlistening.spotify.SpotifyController;
 import xyz.nickr.telegram.nowlistening.db.DatabaseController;
+import xyz.nickr.telegram.nowlistening.spotify.SpotifyController;
 
 /**
  * @author Nick Robson
@@ -57,7 +58,8 @@ public class LoginHttpHandler extends HttpHandler {
             spotifyController.updateSpotifyUser(telegramUserId, credentials);
 
             response.setStatus(HttpStatus.OK_200);
-            response.getWriter().write("Hey look, it worked!");
+            response.setContentType(ContentType.newContentType("text/html"));
+            response.getWriter().write("<html><body><a href=\"tg://NowListeningBot\">Back to Telegram</a></body></html>");
         } else {
             response.sendError(400, "An error occurred while communicating with Spotify.");
             System.err.println("Error while authenticating with Spotify: " + error);

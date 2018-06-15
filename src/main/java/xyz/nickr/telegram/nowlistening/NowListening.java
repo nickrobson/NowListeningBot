@@ -50,11 +50,13 @@ public class NowListening {
         DatabaseController databaseController = new DatabaseController(config);
         SpotifyController spotifyController = new SpotifyController(config, databaseController);
         WebController webController = new WebController(config, databaseController, spotifyController);
+        TelegramController telegramController = new TelegramController(config, databaseController, spotifyController);
 
         EXECUTOR.scheduleWithFixedDelay(new AuthorisationRefresher(databaseController, spotifyController), 0L, 30L, TimeUnit.SECONDS);
-        EXECUTOR.scheduleWithFixedDelay(new PlayingTrackRefresher(databaseController), 10L, 30L, TimeUnit.SECONDS);
+        EXECUTOR.scheduleWithFixedDelay(new PlayingTrackRefresher(databaseController, spotifyController), 10L, 15L, TimeUnit.SECONDS);
 
         webController.start();
+        telegramController.start();
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             //noinspection Convert2MethodRef
