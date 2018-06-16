@@ -84,7 +84,7 @@ public class SpotifyController {
                 .setAccessToken(user.getAccessToken()).build()
                 .getUsersCurrentlyPlayingTrack().build().execute();
 
-        if (currentlyPlaying.getIs_playing()) {
+        if (currentlyPlaying != null && currentlyPlaying.getIs_playing()) {
             Track track = currentlyPlaying.getItem();
 
             SpotifyPlayingData playingData = SpotifyPlayingData.builder()
