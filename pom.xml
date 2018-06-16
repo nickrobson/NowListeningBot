@@ -33,7 +33,7 @@
         <dependency>
             <groupId>com.jtelegram</groupId>
             <artifactId>jtelegrambotapi-core</artifactId>
-            <version>3.6.2-SNAPSHOT</version>
+            <version>3.6.3-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.xerial</groupId>
