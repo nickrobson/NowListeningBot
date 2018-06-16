@@ -1,5 +1,6 @@
 package xyz.nickr.telegram.nowlistening.db;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.experimental.Wither;
@@ -10,6 +11,7 @@ import lombok.experimental.Wither;
 @Data
 @Wither
 @Builder
+@AllArgsConstructor
 public class NowListeningMessage {
 
     private final long telegramUserId;

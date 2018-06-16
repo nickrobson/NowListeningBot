@@ -10,9 +10,8 @@ import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.SQLRecoverableException;
 import java.sql.Statement;
 import java.time.Instant;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -100,7 +99,7 @@ public class DatabaseController {
                 statement.execute(
                         "CREATE TABLE IF NOT EXISTS now_listening_messages (" +
                                 "id INTEGER PRIMARY KEY," +
-                                "telegram_user INTEGER UNIQUE NOT NULL," +
+                                "telegram_user INTEGER NOT NULL," +
                                 "inline_message_id STRING UNIQUE NOT NULL" +
                                 ")");
             }
@@ -115,9 +114,10 @@ public class DatabaseController {
             )) {
                 preparedStatement.setString(1, uuid.toString());
 
-                ResultSet rs = preparedStatement.executeQuery();
-                if (rs.next()) {
-                    return Optional.of(rs.getLong("telegram_user"));
+                try (ResultSet rs = preparedStatement.executeQuery()) {
+                    if (rs.next()) {
+                        return Optional.of(rs.getLong("telegram_user"));
+                    }
                 }
                 return Optional.empty();
             }
@@ -130,9 +130,10 @@ public class DatabaseController {
                     "SELECT * FROM uuids WHERE telegram_user = ?"
             )) {
                 preparedStatement.setLong(1, telegramUserId);
-                ResultSet rs = preparedStatement.executeQuery();
-                if (rs.next()) {
-                    return UUID.fromString(rs.getString("uuid"));
+                try (ResultSet rs = preparedStatement.executeQuery()) {
+                    if (rs.next()) {
+                        return UUID.fromString(rs.getString("uuid"));
+                    }
                 }
             }
 
@@ -174,9 +175,10 @@ public class DatabaseController {
             )) {
                 preparedStatement.setLong(1, telegramUserId);
 
-                ResultSet rs = preparedStatement.executeQuery();
-                if (rs.next()) {
-                    return Optional.of(toUser(rs));
+                try (ResultSet rs = preparedStatement.executeQuery()) {
+                    if (rs.next()) {
+                        return Optional.of(toUser(rs));
+                    }
                 }
                 return Optional.empty();
             }
@@ -212,11 +214,12 @@ public class DatabaseController {
                 preparedStatement.setLong(1, Instant.now().getEpochSecond());
 
                 Set<SpotifyUser> userSet = new HashSet<>();
-                ResultSet rs = preparedStatement.executeQuery();
-                while (rs.next()) {
-                    userSet.add(toUser(rs));
+                try (ResultSet rs = preparedStatement.executeQuery()) {
+                    while (rs.next()) {
+                        userSet.add(toUser(rs));
+                    }
                 }
-                return userSet;
+                return Collections.unmodifiableSet(userSet);
             }
         });
     }
@@ -229,11 +232,12 @@ public class DatabaseController {
                 preparedStatement.setLong(1, Instant.now().getEpochSecond());
 
                 Set<SpotifyUser> userSet = new HashSet<>();
-                ResultSet rs = preparedStatement.executeQuery();
-                while (rs.next()) {
-                    userSet.add(toUser(rs));
+                try (ResultSet rs = preparedStatement.executeQuery()) {
+                    while (rs.next()) {
+                        userSet.add(toUser(rs));
+                    }
                 }
-                return userSet;
+                return Collections.unmodifiableSet(userSet);
             }
         });
     }
@@ -256,17 +260,18 @@ public class DatabaseController {
             )) {
                 preparedStatement.setLong(1, telegramUserId);
 
-                ResultSet rs = preparedStatement.executeQuery();
-                if (rs.next()) {
-                    long storedTelegramUserId = rs.getLong("telegram_user");
-                    String lastTrackName = rs.getString("last_track_name");
-                    String lastTrackArtist = rs.getString("last_track_artist");
-                    String lastTrackUrl = rs.getString("last_track_url");
-                    long lastChecked = rs.getLong("last_checked");
-                    boolean playing = rs.getBoolean("playing");
-                    return Optional.of(new SpotifyPlayingData(storedTelegramUserId, lastTrackName, lastTrackArtist, lastTrackUrl, lastChecked, playing));
-                } else {
-                    return Optional.empty();
+                try (ResultSet rs = preparedStatement.executeQuery()) {
+                    if (rs.next()) {
+                        long storedTelegramUserId = rs.getLong("telegram_user");
+                        String lastTrackName = rs.getString("last_track_name");
+                        String lastTrackArtist = rs.getString("last_track_artist");
+                        String lastTrackUrl = rs.getString("last_track_url");
+                        long lastChecked = rs.getLong("last_checked");
+                        boolean playing = rs.getBoolean("playing");
+                        return Optional.of(new SpotifyPlayingData(storedTelegramUserId, lastTrackName, lastTrackArtist, lastTrackUrl, lastChecked, playing));
+                    } else {
+                        return Optional.empty();
+                    }
                 }
             }
         });
@@ -292,22 +297,52 @@ public class DatabaseController {
         });
     }
 
-    public NowListeningMessage[] getNowListeningMessages(long telegramUserId) throws SQLException {
+    public Set<NowListeningMessage> getNowListeningMessages(long telegramUserId) throws SQLException {
         return withConnection(connection -> {
             try (PreparedStatement preparedStatement = connection.prepareStatement(
                     "SELECT * FROM now_listening_messages WHERE telegram_user = ?"
             )) {
                 preparedStatement.setLong(1, telegramUserId);
 
-                List<NowListeningMessage> messageList = new ArrayList<>();
-                ResultSet rs = preparedStatement.executeQuery();
-                while (rs.next()) {
-                    long storedTelegramUserId = rs.getLong("telegram_user");
-                    String inlineMessageId = rs.getString("inline_message_id");
-                    messageList.add(new NowListeningMessage(storedTelegramUserId, inlineMessageId));
+                Set<NowListeningMessage> messageSet = new HashSet<>();
+                try (ResultSet rs = preparedStatement.executeQuery()) {
+                    while (rs.next()) {
+                        long storedTelegramUserId = rs.getLong("telegram_user");
+                        String inlineMessageId = rs.getString("inline_message_id");
+                        messageSet.add(new NowListeningMessage(storedTelegramUserId, inlineMessageId));
+                    }
+                    return Collections.unmodifiableSet(messageSet);
                 }
-                return messageList.toArray(new NowListeningMessage[messageList.size()]);
             }
+        });
+    }
+
+    public void addNowListeningMessage(NowListeningMessage nowListeningMessage) throws SQLException {
+        withConnection(connection -> {
+            try (PreparedStatement preparedStatement = connection.prepareStatement(
+                    "INSERT OR REPLACE INTO now_listening_messages " +
+                            "(telegram_user, inline_message_id) " +
+                            "VALUES (?, ?)"
+            )) {
+                preparedStatement.setLong(1, nowListeningMessage.getTelegramUserId());
+                preparedStatement.setString(2, nowListeningMessage.getInlineMessageId());
+                preparedStatement.execute();
+            }
+            return null;
+        });
+    }
+
+    public void deleteNowListeningMessage(NowListeningMessage nowListeningMessage) throws SQLException {
+        withConnection(connection -> {
+            try (PreparedStatement preparedStatement = connection.prepareStatement(
+                    "DELETE FROM now_listening_messages " +
+                            "WHERE telegram_user = ? AND inline_message_id = ?"
+            )) {
+                preparedStatement.setLong(1, nowListeningMessage.getTelegramUserId());
+                preparedStatement.setString(2, nowListeningMessage.getInlineMessageId());
+                preparedStatement.execute();
+            }
+            return null;
         });
     }
 }

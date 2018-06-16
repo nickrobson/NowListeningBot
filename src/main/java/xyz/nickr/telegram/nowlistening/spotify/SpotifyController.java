@@ -11,7 +11,10 @@ import java.io.IOException;
 import java.net.URI;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -23,6 +26,7 @@ public class SpotifyController {
 
     private final SpotifyApi api;
     private final DatabaseController databaseController;
+    private final List<PlayingDataConsumer> listeners = new ArrayList<>();
 
     public SpotifyController(JsonObject config, DatabaseController databaseController) {
         JsonObject spotify = config.getAsJsonObject("spotify");
@@ -41,6 +45,10 @@ public class SpotifyController {
 
     public SpotifyApi getApi() {
         return api;
+    }
+
+    public void addListener(PlayingDataConsumer consumer) {
+        listeners.add(Objects.requireNonNull(consumer, "listener can't be null"));
     }
 
     public URI getAuthorizationUri(long telegramUserId) throws SQLException {
@@ -70,6 +78,8 @@ public class SpotifyController {
     }
 
     public Optional<SpotifyPlayingData> updatePlayingData(SpotifyUser user) throws SQLException, IOException, SpotifyWebApiException {
+        Optional<SpotifyPlayingData> oldPlayingData = databaseController.getPlayingData(user.getTelegramUserId());
+
         CurrentlyPlaying currentlyPlaying = SpotifyApi.builder()
                 .setAccessToken(user.getAccessToken()).build()
                 .getUsersCurrentlyPlayingTrack().build().execute();
@@ -90,16 +100,33 @@ public class SpotifyController {
                     .build();
 
             databaseController.updatePlayingData(playingData);
-
+            playingDataChanged(oldPlayingData, playingData);
             return Optional.of(playingData);
         } else {
-            Optional<SpotifyPlayingData> playingData = databaseController.getPlayingData(user.getTelegramUserId());
-            if (playingData.isPresent()) {
-                SpotifyPlayingData data = playingData.get().withPlaying(false);
+            if (oldPlayingData.isPresent()) {
+                SpotifyPlayingData data = oldPlayingData.get().withPlaying(false);
                 databaseController.updatePlayingData(data);
+                playingDataChanged(oldPlayingData, data);
                 return Optional.of(data);
             }
             return Optional.empty();
         }
+    }
+
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    private void playingDataChanged(Optional<SpotifyPlayingData> oldPlayingData, SpotifyPlayingData newPlayingData) {
+        if (!oldPlayingData.isPresent() || !oldPlayingData.get().equals(newPlayingData)) {
+            listeners.forEach(listener -> {
+                try {
+                    listener.accept(newPlayingData);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            });
+        }
+    }
+
+    public interface PlayingDataConsumer {
+        void accept(SpotifyPlayingData playingData) throws Exception;
     }
 }

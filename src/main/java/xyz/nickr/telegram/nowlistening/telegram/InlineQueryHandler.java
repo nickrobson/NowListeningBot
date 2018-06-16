@@ -10,6 +10,7 @@ import com.jtelegram.api.inline.keyboard.InlineKeyboardMarkup;
 import com.jtelegram.api.inline.keyboard.InlineKeyboardRow;
 import com.jtelegram.api.inline.result.InlineResultArticle;
 import com.jtelegram.api.requests.inline.AnswerInlineQuery;
+import com.jtelegram.api.requests.message.framework.ParseMode;
 import com.jtelegram.api.util.TextBuilder;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
@@ -27,6 +28,7 @@ public class InlineQueryHandler implements EventHandler<InlineQueryEvent> {
     private final TelegramBot bot;
     private final DatabaseController databaseController;
     private final SpotifyController spotifyController;
+    private final TelegramController telegramController;
 
     @Override
     public void onEvent(InlineQueryEvent event) {
@@ -35,58 +37,47 @@ public class InlineQueryHandler implements EventHandler<InlineQueryEvent> {
             long telegramUserId = query.getFrom().getId();
             Optional<SpotifyUser> user = databaseController.getSpotifyUser(telegramUserId);
             if (user.isPresent()) {
-                Optional<SpotifyPlayingData> playingData = spotifyController.updatePlayingData(user.get());
-                if (!playingData.isPresent() || !playingData.get().isPlaying()) {
+                SpotifyPlayingData track = spotifyController.updatePlayingData(user.get()).orElse(null);
+                if (track == null || !track.isPlaying()) {
                     bot.perform(AnswerInlineQuery.builder()
                             .queryId(query.getId())
                             .addResult(InlineResultArticle.builder()
-                                    .id("SendMusicMessage")
+                                    .id(TelegramController.NOW_LISTENING_MSG_ID)
                                     .title("Show what music you listen to.")
-                                    .description("The message will auto-update as you change songs.")
+                                    .description("I'll auto-update as you change songs.")
                                     .inputMessageContent(InputTextMessageContent.builder()
-                                            .messageText("I'm not listening to Spotify right now \uD83D\uDD07")
+                                            .messageText(telegramController.getMessage(track))
                                             .disableWebPagePreview(true)
                                             .build())
+                                    .replyMarkup(telegramController.getKeyboard(track))
                                     .build())
                             .cacheTime(0)
+                            .errorHandler(Throwable::printStackTrace)
                             .build());
                 } else {
-                    SpotifyPlayingData track = playingData.get();
-                    TextBuilder messageText = TextBuilder.create()
-                            .escaped("\uD83C\uDFB5 I'm listening to ")
-                            .bold(track.getLastTrackName())
-                            .escaped(" by ")
-                            .italics(track.getLastTrackArtist())
-                            .escaped(" \uD83C\uDFB5");
-
                     bot.perform(AnswerInlineQuery.builder()
                             .queryId(query.getId())
                             .addResult(InlineResultArticle.builder()
-                                    .id("SendMusicMessage")
+                                    .id(TelegramController.NOW_LISTENING_MSG_ID)
                                     .title("Show what music you listen to.")
-                                    .description("The message will auto-update as you change songs.")
+                                    .description("I'll auto-update as you change songs.")
                                     .inputMessageContent(InputTextMessageContent.builder()
-                                            .messageText(messageText)
+                                            .messageText(telegramController.getMessage(track))
                                             .disableWebPagePreview(true)
                                             .build())
-                                    .replyMarkup(InlineKeyboardMarkup.builder()
-                                            .keyboard(InlineKeyboardRow.builder()
-                                                    .button(InlineKeyboardButton.builder()
-                                                            .label("Open in Spotify")
-                                                            .url(track.getLastTrackUrl())
-                                                            .build())
-                                                    .build())
-                                            .build())
+                                    .replyMarkup(telegramController.getKeyboard(track))
                                     .build())
                             .cacheTime(0)
+                            .errorHandler(Throwable::printStackTrace)
                             .build());
                 }
             } else {
                 bot.perform(AnswerInlineQuery.builder()
                         .queryId(query.getId())
                         .switchPmText("Connect with Spotify")
-                        .switchPmParameter("AuthSpotify")
+                        .switchPmParameter(TelegramController.AUTH_WITH_SPOTIFY_ID)
                         .cacheTime(0)
+                        .errorHandler(Throwable::printStackTrace)
                         .build());
             }
         } catch (Exception ex) {
