@@ -157,7 +157,7 @@ public class TelegramController {
                 .keyboard(rowBuilder
                         .button(InlineKeyboardButton.builder()
                                 .label("Share your music!")
-                                .switchInlineQueryCurrentChat("")
+                                .switchInlineQuery("")
                                 .build())
                         .build())
                 .build();
