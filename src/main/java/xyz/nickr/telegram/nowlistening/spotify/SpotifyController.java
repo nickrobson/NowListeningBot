@@ -94,7 +94,7 @@ public class SpotifyController {
                             Arrays.stream(track.getArtists())
                                     .map(ArtistSimplified::getName)
                                     .collect(Collectors.joining(", ")))
-                    .lastTrackUrl(track.getHref())
+                    .lastTrackUrl(track.getExternalUrls().get("spotify"))
                     .lastChecked(Instant.now().getEpochSecond())
                     .playing(true)
                     .build();
