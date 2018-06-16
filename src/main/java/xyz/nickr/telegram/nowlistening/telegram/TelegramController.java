@@ -113,6 +113,8 @@ public class TelegramController {
                                 } else if (!err.getDescription().contains("message is not modified")) {
                                     err.printStackTrace();
                                 }
+                            } else if (err != null) {
+                                err.printStackTrace();
                             }
                         })
                         .build());
