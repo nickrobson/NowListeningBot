@@ -103,14 +103,16 @@ public class TelegramController {
                 this.bot.perform(messageBuilder
                         .inlineMessageId(message.getInlineMessageId())
                         .errorHandler(err -> {
-                            if (err.getDescription().contains("MESSAGE_ID_INVALID")) {
-                                try {
-                                    databaseController.deleteNowListeningMessage(message);
-                                } catch (SQLException ex) {
-                                    ex.printStackTrace();
+                            if (err != null && err.getDescription() != null) {
+                                if ("MESSAGE_ID_INVALID".contains(err.getDescription())) {
+                                    try {
+                                        databaseController.deleteNowListeningMessage(message);
+                                    } catch (SQLException ex) {
+                                        ex.printStackTrace();
+                                    }
+                                } else if (!err.getDescription().contains("message is not modified")) {
+                                    err.printStackTrace();
                                 }
-                            } else if (!err.getDescription().contains("message is not modified")) {
-                                err.printStackTrace();
                             }
                         })
                         .build());
