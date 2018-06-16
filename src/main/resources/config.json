@@ -1,0 +1,16 @@
+{
+  "webserver": {
+    "port": 1337
+  },
+  "database": {
+    "url": "jdbc:sqlite:now_listening.db"
+  },
+  "spotify": {
+    "client_id": "SPOTIFY_CLIENT_ID",
+    "client_secret": "SPOTIFY_CLIENT_SECRET",
+    "redirect_uri": "SPOTIFY_REDIRECT_URI"
+  },
+  "telegram": {
+    "api_key": "TELEGRAM_BOT_TOKEN"
+  }
+}

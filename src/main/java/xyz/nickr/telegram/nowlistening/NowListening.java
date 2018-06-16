@@ -5,12 +5,16 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -37,8 +41,24 @@ public class NowListening {
     private static final ScheduledExecutorService EXECUTOR = Executors.newScheduledThreadPool(4);
 
     public static void main(String[] args) throws IOException {
-        JsonObject config;
         Path configJson = Paths.get("config.json");
+
+        if (!configJson.toFile().exists()) {
+            try (BufferedWriter writer = Files.newBufferedWriter(configJson, StandardOpenOption.CREATE_NEW)) {
+                InputStream inputStream = NowListening.class.getResourceAsStream("/config.json");
+                try (InputStreamReader reader = new InputStreamReader(inputStream)) {
+                    int c;
+                    char[] buf = new char[4096];
+                    while ((c = reader.read(buf)) > 0) {
+                        writer.write(buf, 0, c);
+                    }
+                }
+            } catch (IOException ex) {
+                throw new UncheckedIOException("Failed to copy default configuration", ex);
+            }
+        }
+
+        JsonObject config;
         try (BufferedReader reader = Files.newBufferedReader(configJson, StandardCharsets.UTF_8)) {
             config = NowListening.GSON.fromJson(reader, JsonObject.class);
         } catch (JsonSyntaxException ex) {
