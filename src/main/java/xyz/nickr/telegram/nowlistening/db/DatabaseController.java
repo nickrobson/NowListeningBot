@@ -100,7 +100,8 @@ public class DatabaseController {
                         "CREATE TABLE IF NOT EXISTS now_listening_messages (" +
                                 "id INTEGER PRIMARY KEY," +
                                 "telegram_user INTEGER NOT NULL," +
-                                "inline_message_id STRING UNIQUE NOT NULL" +
+                                "inline_message_id STRING UNIQUE NOT NULL," +
+                                "time_added INTEGER NOT NULL" +
                                 ")");
             }
             return null;
@@ -309,7 +310,9 @@ public class DatabaseController {
                     while (rs.next()) {
                         long storedTelegramUserId = rs.getLong("telegram_user");
                         String inlineMessageId = rs.getString("inline_message_id");
-                        messageSet.add(new NowListeningMessage(storedTelegramUserId, inlineMessageId));
+                        long timeAdded = rs.getLong("time_added");
+                        System.out.println(timeAdded);
+                        messageSet.add(new NowListeningMessage(storedTelegramUserId, inlineMessageId, timeAdded));
                     }
                     return Collections.unmodifiableSet(messageSet);
                 }
@@ -321,11 +324,12 @@ public class DatabaseController {
         withConnection(connection -> {
             try (PreparedStatement preparedStatement = connection.prepareStatement(
                     "INSERT OR REPLACE INTO now_listening_messages " +
-                            "(telegram_user, inline_message_id) " +
-                            "VALUES (?, ?)"
+                            "(telegram_user, inline_message_id, time_added) " +
+                            "VALUES (?, ?, ?)"
             )) {
                 preparedStatement.setLong(1, nowListeningMessage.getTelegramUserId());
                 preparedStatement.setString(2, nowListeningMessage.getInlineMessageId());
+                preparedStatement.setLong(3, nowListeningMessage.getTimeAdded());
                 preparedStatement.execute();
             }
             return null;

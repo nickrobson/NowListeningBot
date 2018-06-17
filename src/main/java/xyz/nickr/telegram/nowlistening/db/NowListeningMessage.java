@@ -16,5 +16,6 @@ public class NowListeningMessage {
 
     private final long telegramUserId;
     private final String inlineMessageId;
+    private final long timeAdded;
 
 }
