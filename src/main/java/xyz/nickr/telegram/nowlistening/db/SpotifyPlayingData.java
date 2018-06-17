@@ -2,6 +2,7 @@ package xyz.nickr.telegram.nowlistening.db;
 
 import lombok.Builder;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.experimental.Wither;
 
 /**
@@ -10,6 +11,7 @@ import lombok.experimental.Wither;
 @Data
 @Wither
 @Builder
+@EqualsAndHashCode(exclude = "lastChecked")
 public class SpotifyPlayingData {
 
     private final long telegramUserId;
