@@ -27,7 +27,8 @@ import xyz.nickr.telegram.nowlistening.spotify.SpotifyController;
 public class TelegramController {
 
     public static final String AUTH_WITH_SPOTIFY_ID = "AuthSpotify";
-    public static final String NOW_LISTENING_MSG_ID = "NowListeningMsg";
+    public static final String NOW_LISTENING_MSG_UPDATE_ID = "NowListeningUpdate";
+    public static final String NOW_LISTENING_MSG_NO_UPDATE_ID = "NowListeningNoUpdate";
 
     private final String apiKey;
     private final DatabaseController databaseController;

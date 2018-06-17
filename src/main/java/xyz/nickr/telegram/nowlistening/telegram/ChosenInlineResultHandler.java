@@ -24,7 +24,7 @@ public class ChosenInlineResultHandler implements EventHandler<ChosenInlineResul
             String resultId = result.getResultId();
             String messageId = result.getInlineMessageId();
 
-            if (TelegramController.NOW_LISTENING_MSG_ID.equals(resultId)) {
+            if (TelegramController.NOW_LISTENING_MSG_UPDATE_ID.equals(resultId)) {
                 databaseController.addNowListeningMessage(new NowListeningMessage(telegramUserId, messageId));
                 telegramController.updateNowListeningMessages(telegramUserId);
             }
