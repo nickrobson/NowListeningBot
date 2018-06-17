@@ -105,7 +105,7 @@ public class TelegramController {
                         .inlineMessageId(message.getInlineMessageId())
                         .errorHandler(err -> {
                             if (err != null && err.getDescription() != null) {
-                                if ("MESSAGE_ID_INVALID".contains(err.getDescription())) {
+                                if (err.getDescription().contains("MESSAGE_ID_INVALID")) {
                                     try {
                                         databaseController.deleteNowListeningMessage(message);
                                     } catch (SQLException ex) {
