@@ -311,7 +311,6 @@ public class DatabaseController {
                         long storedTelegramUserId = rs.getLong("telegram_user");
                         String inlineMessageId = rs.getString("inline_message_id");
                         long timeAdded = rs.getLong("time_added");
-                        System.out.println(timeAdded);
                         messageSet.add(new NowListeningMessage(storedTelegramUserId, inlineMessageId, timeAdded));
                     }
                     return Collections.unmodifiableSet(messageSet);
