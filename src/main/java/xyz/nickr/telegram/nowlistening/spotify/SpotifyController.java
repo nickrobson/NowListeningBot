@@ -84,7 +84,7 @@ public class SpotifyController {
                 .setAccessToken(user.getAccessToken()).build()
                 .getUsersCurrentlyPlayingTrack().build().execute();
 
-        if (currentlyPlaying != null && currentlyPlaying.getIs_playing()) {
+        if (currentlyPlaying != null && currentlyPlaying.getItem() != null) {
             Track track = currentlyPlaying.getItem();
 
             SpotifyPlayingData playingData = SpotifyPlayingData.builder()
@@ -96,7 +96,7 @@ public class SpotifyController {
                                     .collect(Collectors.joining(", ")))
                     .lastTrackUrl(track.getExternalUrls().get("spotify"))
                     .lastChecked(Instant.now().getEpochSecond())
-                    .playing(true)
+                    .playing(currentlyPlaying.getIs_playing())
                     .build();
 
             databaseController.updatePlayingData(playingData);
