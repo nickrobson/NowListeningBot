@@ -16,6 +16,7 @@ import com.jtelegram.api.util.TextBuilder;
 import java.net.URI;
 import java.sql.SQLException;
 import java.util.Set;
+import lombok.Getter;
 import xyz.nickr.telegram.nowlistening.db.DatabaseController;
 import xyz.nickr.telegram.nowlistening.db.NowListeningMessage;
 import xyz.nickr.telegram.nowlistening.db.SpotifyPlayingData;
@@ -34,6 +35,7 @@ public class TelegramController {
     private final DatabaseController databaseController;
     private final SpotifyController spotifyController;
 
+    @Getter
     private volatile TelegramBot bot;
 
     public TelegramController(JsonObject config, DatabaseController databaseController, SpotifyController spotifyController) {
