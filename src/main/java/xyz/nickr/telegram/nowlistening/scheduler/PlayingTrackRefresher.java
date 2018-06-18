@@ -1,8 +1,5 @@
 package xyz.nickr.telegram.nowlistening.scheduler;
 
-import com.wrapper.spotify.exceptions.SpotifyWebApiException;
-import java.io.IOException;
-import java.sql.SQLException;
 import java.util.Set;
 import lombok.AllArgsConstructor;
 import xyz.nickr.telegram.nowlistening.db.DatabaseController;
@@ -25,7 +22,7 @@ public class PlayingTrackRefresher implements Runnable {
             for (SpotifyUser user : userSet) {
                 try {
                     spotifyController.updatePlayingData(user);
-                } catch (SQLException | IOException | SpotifyWebApiException ex) {
+                } catch (Exception ex) {
                     ex.printStackTrace();
                 }
             }
