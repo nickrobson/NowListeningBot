@@ -256,6 +256,22 @@ public class DatabaseController {
         });
     }
 
+    public Set<Long> getAllUserIds() throws SQLException {
+        return withConnection(connection -> {
+            try (PreparedStatement preparedStatement = connection.prepareStatement(
+                    "SELECT telegram_user FROM spotify_user"
+            )) {
+                Set<Long> userSet = new LinkedHashSet<>();
+                try (ResultSet rs = preparedStatement.executeQuery()) {
+                    while (rs.next()) {
+                        userSet.add(rs.getLong("telegram_user"));
+                    }
+                }
+                return Collections.unmodifiableSet(userSet);
+            }
+        });
+    }
+
     private SpotifyUser toUser(ResultSet rs) throws SQLException {
         long storedTelegramUserId = rs.getLong("telegram_user");
         String languageCode = rs.getString("language_code");

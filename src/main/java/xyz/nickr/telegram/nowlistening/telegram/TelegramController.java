@@ -3,7 +3,10 @@ package xyz.nickr.telegram.nowlistening.telegram;
 import com.google.gson.JsonObject;
 import com.jtelegram.api.TelegramBot;
 import com.jtelegram.api.TelegramBotRegistry;
+import com.jtelegram.api.chat.ChatType;
+import com.jtelegram.api.commands.filters.ChatTypeFilter;
 import com.jtelegram.api.commands.filters.MentionFilter;
+import com.jtelegram.api.commands.filters.TextFilter;
 import com.jtelegram.api.events.inline.ChosenInlineResultEvent;
 import com.jtelegram.api.events.inline.InlineQueryEvent;
 import com.jtelegram.api.inline.keyboard.InlineKeyboardButton;
@@ -20,6 +23,7 @@ import xyz.nickr.telegram.nowlistening.db.DatabaseController;
 import xyz.nickr.telegram.nowlistening.db.NowListeningMessage;
 import xyz.nickr.telegram.nowlistening.db.SpotifyPlayingData;
 import xyz.nickr.telegram.nowlistening.spotify.SpotifyController;
+import xyz.nickr.telegram.nowlistening.telegram.commands.BroadcastCommand;
 import xyz.nickr.telegram.nowlistening.telegram.commands.GdprCommand;
 import xyz.nickr.telegram.nowlistening.telegram.commands.StartCommand;
 
@@ -59,8 +63,12 @@ public class TelegramController {
             this.bot = bot;
             this.bot.getEventRegistry().registerEvent(InlineQueryEvent.class, new InlineQueryHandler(bot, databaseController, spotifyController, this));
             this.bot.getEventRegistry().registerEvent(ChosenInlineResultEvent.class, new ChosenInlineResultHandler(databaseController, this));
-            this.bot.getCommandRegistry().registerCommand("start", new MentionFilter(new StartCommand(databaseController, spotifyController)));
-            this.bot.getCommandRegistry().registerCommand("gdpr", new MentionFilter(new GdprCommand(databaseController)));
+            this.bot.getCommandRegistry().registerCommand(new MentionFilter(
+                    new ChatTypeFilter(ChatType.PRIVATE,
+                            new TextFilter("start", false, new StartCommand(databaseController, spotifyController)),
+                            new TextFilter("gdpr", false, new GdprCommand(databaseController)),
+                            new TextFilter("broadcast", false, new BroadcastCommand(databaseController))
+            )));
             this.bot.getEventRegistry().registerEvent(UnregisteredMenuInteractionEvent.class, e -> System.out.println(e.toString()));
 
             this.spotifyController.addListener(playingData -> updateNowListeningMessages(playingData.getTelegramUserId()));
