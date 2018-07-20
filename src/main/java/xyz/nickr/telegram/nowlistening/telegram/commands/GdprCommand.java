@@ -128,6 +128,7 @@ public class GdprCommand implements CommandHandler {
                         if (spotifyUser.isPresent()) {
                             builder.newLine().newLine().escaped("Spotify Data:");
                             builder.newLine().escaped(spotifyUser.get().toString());
+                            builder.newLine().italics("Note: I also store an access and refresh token to access the Spotify API. These are hidden here as they are sensitive.");
                         }
                     } catch (SQLException ex) {
                         ex.printStackTrace();
