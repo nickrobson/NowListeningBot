@@ -2,6 +2,7 @@ package xyz.nickr.telegram.nowlistening.db;
 
 import lombok.Builder;
 import lombok.Data;
+import lombok.ToString;
 import lombok.experimental.Wither;
 
 /**
@@ -10,6 +11,7 @@ import lombok.experimental.Wither;
 @Data
 @Wither
 @Builder
+@ToString(exclude = {"accessToken", "refreshToken"})
 public class SpotifyUser {
 
     private final long telegramUserId;
