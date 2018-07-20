@@ -9,11 +9,10 @@ import com.jtelegram.api.events.inline.InlineQueryEvent;
 import com.jtelegram.api.inline.keyboard.InlineKeyboardButton;
 import com.jtelegram.api.inline.keyboard.InlineKeyboardMarkup;
 import com.jtelegram.api.inline.keyboard.InlineKeyboardRow;
+import com.jtelegram.api.menu.events.UnregisteredMenuInteractionEvent;
 import com.jtelegram.api.requests.message.edit.EditTextMessage;
-import com.jtelegram.api.requests.message.send.SendText;
 import com.jtelegram.api.update.PollingUpdateProvider;
 import com.jtelegram.api.util.TextBuilder;
-import java.net.URI;
 import java.sql.SQLException;
 import java.util.Set;
 import lombok.Getter;
@@ -21,6 +20,8 @@ import xyz.nickr.telegram.nowlistening.db.DatabaseController;
 import xyz.nickr.telegram.nowlistening.db.NowListeningMessage;
 import xyz.nickr.telegram.nowlistening.db.SpotifyPlayingData;
 import xyz.nickr.telegram.nowlistening.spotify.SpotifyController;
+import xyz.nickr.telegram.nowlistening.telegram.commands.GdprCommand;
+import xyz.nickr.telegram.nowlistening.telegram.commands.StartCommand;
 
 /**
  * @author Nick Robson
@@ -58,35 +59,9 @@ public class TelegramController {
             this.bot = bot;
             this.bot.getEventRegistry().registerEvent(InlineQueryEvent.class, new InlineQueryHandler(bot, databaseController, spotifyController, this));
             this.bot.getEventRegistry().registerEvent(ChosenInlineResultEvent.class, new ChosenInlineResultHandler(databaseController, this));
-            this.bot.getCommandRegistry().registerCommand("start", new MentionFilter((event, command) -> {
-                try {
-                    if (databaseController.getSpotifyUser(command.getSender().getId()).isPresent()) {
-                        this.bot.perform(SendText.builder()
-                                .chatId(command.getChat().getChatId())
-                                .replyToMessageID(command.getBaseMessage().getMessageId())
-                                .text("You are already authenticated with Spotify.")
-                                .errorHandler(Throwable::printStackTrace)
-                                .build());
-                    } else {
-                        URI uri = spotifyController.getAuthorizationUri(command.getSender().getId());
-                        this.bot.perform(SendText.builder()
-                                .chatId(command.getChat().getChatId())
-                                .replyToMessageID(command.getBaseMessage().getMessageId())
-                                .text("To authenticate with Spotify, please visit this link:\n" + uri.toString())
-                                .errorHandler(Throwable::printStackTrace)
-                                .build());
-                    }
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                    this.bot.perform(SendText.builder()
-                            .chatId(command.getChat().getChatId())
-                            .replyToMessageID(command.getBaseMessage().getMessageId())
-                            .text("An error occurred. Please contact @nickrobson if it keeps happening.")
-                            .errorHandler(Throwable::printStackTrace)
-                            .build());
-                }
-                return true;
-            }));
+            this.bot.getCommandRegistry().registerCommand("start", new MentionFilter(new StartCommand(databaseController, spotifyController)));
+            this.bot.getCommandRegistry().registerCommand("gdpr", new MentionFilter(new GdprCommand(databaseController)));
+            this.bot.getEventRegistry().registerEvent(UnregisteredMenuInteractionEvent.class, e -> System.out.println(e.toString()));
 
             this.spotifyController.addListener(playingData -> updateNowListeningMessages(playingData.getTelegramUserId()));
         });

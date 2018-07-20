@@ -82,7 +82,9 @@ public class LoginHttpHandler extends HttpHandler {
                             .code("@NowListeningBot")
                             .escaped(" in your chat box!")
                             .newLine().newLine()
-                            .escaped("You can choose whether to keep the message updated with what you're listening to or just only show what you're listening at that moment."))
+                            .escaped("You can choose whether to keep the message updated with what you're listening to or just only show what you're listening at that moment.")
+                            .newLine().newLine()
+                            .escaped("You can use /gdpr to access and remove data that has been stored on you."))
                     .build());
         } else {
             response.sendError(400, "An error occurred while communicating with Spotify.");

@@ -25,16 +25,6 @@ import xyz.nickr.telegram.nowlistening.spotify.SpotifyController;
 import xyz.nickr.telegram.nowlistening.telegram.TelegramController;
 import xyz.nickr.telegram.nowlistening.web.WebController;
 
-/*
- * TODO
- *
- * [X] Authorisation with Spotify
- * [X] Scheduler refreshing authorisation when necessary
- * [X] Scheduler checking each user's current song
- * [X] Allow sending messages that show your current song
- * [ ] Updating sent messages to keep the current song up-to-date :')
- * [ ] Sending out the bot's @-mention so others can use it
- */
 public class NowListening {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();

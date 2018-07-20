@@ -12,6 +12,7 @@ import java.sql.Statement;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -207,6 +208,18 @@ public class DatabaseController {
         });
     }
 
+    public void deleteSpotifyUser(long telegramUserId) throws SQLException {
+        withConnection(connection -> {
+            try (PreparedStatement preparedStatement = connection.prepareStatement(
+                    "DELETE FROM spotify_user WHERE telegram_user = ?"
+            )) {
+                preparedStatement.setLong(1, telegramUserId);
+                preparedStatement.execute();
+            }
+            return null;
+        });
+    }
+
     public Set<SpotifyUser> getUsersRequiringReauthorisation() throws SQLException {
         return withConnection(connection -> {
             try (PreparedStatement preparedStatement = connection.prepareStatement(
@@ -214,7 +227,7 @@ public class DatabaseController {
             )) {
                 preparedStatement.setLong(1, Instant.now().getEpochSecond());
 
-                Set<SpotifyUser> userSet = new HashSet<>();
+                Set<SpotifyUser> userSet = new LinkedHashSet<>();
                 try (ResultSet rs = preparedStatement.executeQuery()) {
                     while (rs.next()) {
                         userSet.add(toUser(rs));
@@ -232,7 +245,7 @@ public class DatabaseController {
             )) {
                 preparedStatement.setLong(1, Instant.now().getEpochSecond());
 
-                Set<SpotifyUser> userSet = new HashSet<>();
+                Set<SpotifyUser> userSet = new LinkedHashSet<>();
                 try (ResultSet rs = preparedStatement.executeQuery()) {
                     while (rs.next()) {
                         userSet.add(toUser(rs));
@@ -298,6 +311,18 @@ public class DatabaseController {
         });
     }
 
+    public void deletePlayingData(long telegramUserId) throws SQLException {
+        withConnection(connection -> {
+            try (PreparedStatement preparedStatement = connection.prepareStatement(
+                    "DELETE FROM spotify_playing_data WHERE telegram_user = ?"
+            )) {
+                preparedStatement.setLong(1, telegramUserId);
+                preparedStatement.execute();
+            }
+            return null;
+        });
+    }
+
     public Set<NowListeningMessage> getNowListeningMessages(long telegramUserId) throws SQLException {
         return withConnection(connection -> {
             try (PreparedStatement preparedStatement = connection.prepareStatement(
@@ -305,7 +330,7 @@ public class DatabaseController {
             )) {
                 preparedStatement.setLong(1, telegramUserId);
 
-                Set<NowListeningMessage> messageSet = new HashSet<>();
+                Set<NowListeningMessage> messageSet = new LinkedHashSet<>();
                 try (ResultSet rs = preparedStatement.executeQuery()) {
                     while (rs.next()) {
                         long storedTelegramUserId = rs.getLong("telegram_user");
@@ -343,6 +368,18 @@ public class DatabaseController {
             )) {
                 preparedStatement.setLong(1, nowListeningMessage.getTelegramUserId());
                 preparedStatement.setString(2, nowListeningMessage.getInlineMessageId());
+                preparedStatement.execute();
+            }
+            return null;
+        });
+    }
+
+    public void deleteAllMessages(long telegramUserId) throws SQLException {
+        withConnection(connection -> {
+            try (PreparedStatement preparedStatement = connection.prepareStatement(
+                    "DELETE FROM now_listening_messages WHERE telegram_user = ?"
+            )) {
+                preparedStatement.setLong(1, telegramUserId);
                 preparedStatement.execute();
             }
             return null;
