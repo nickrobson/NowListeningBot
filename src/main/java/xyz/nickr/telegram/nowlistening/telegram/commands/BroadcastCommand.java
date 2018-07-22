@@ -88,7 +88,7 @@ public class BroadcastCommand implements CommandHandler {
                                 });
 
                                 try {
-                                    latch.await(users.size() / 2 + 1, TimeUnit.SECONDS);
+                                    latch.await(users.size() * 2, TimeUnit.SECONDS);
                                 } catch (InterruptedException e) {
                                     e.printStackTrace();
                                 }
