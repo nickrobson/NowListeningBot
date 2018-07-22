@@ -6,7 +6,7 @@ import com.jtelegram.api.inline.result.ChosenInlineResult;
 import java.time.Instant;
 import lombok.AllArgsConstructor;
 import xyz.nickr.telegram.nowlistening.db.DatabaseController;
-import xyz.nickr.telegram.nowlistening.db.NowListeningMessage;
+import xyz.nickr.telegram.nowlistening.db.models.NowListeningMessage;
 
 /**
  * @author Nick Robson

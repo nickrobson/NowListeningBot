@@ -17,8 +17,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import xyz.nickr.telegram.nowlistening.db.DatabaseController;
-import xyz.nickr.telegram.nowlistening.db.SpotifyPlayingData;
-import xyz.nickr.telegram.nowlistening.db.SpotifyUser;
+import xyz.nickr.telegram.nowlistening.db.models.SpotifyPlayingData;
+import xyz.nickr.telegram.nowlistening.db.models.SpotifyUser;
 
 public class SpotifyController {
 

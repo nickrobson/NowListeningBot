@@ -18,11 +18,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import xyz.nickr.telegram.nowlistening.db.DatabaseController;
-import xyz.nickr.telegram.nowlistening.db.NowListeningMessage;
-import xyz.nickr.telegram.nowlistening.db.SpotifyPlayingData;
-import xyz.nickr.telegram.nowlistening.db.SpotifyUser;
+import xyz.nickr.telegram.nowlistening.db.models.NLModel;
+import xyz.nickr.telegram.nowlistening.db.models.NowListeningMessage;
+import xyz.nickr.telegram.nowlistening.db.models.SpotifyPlayingData;
+import xyz.nickr.telegram.nowlistening.db.models.SpotifyUser;
 
 /**
  * @author Nick Robson
@@ -107,7 +109,12 @@ public class GdprCommand implements CommandHandler {
                         Set<NowListeningMessage> messageSet = databaseController.getNowListeningMessages(telegramUser);
                         if (!messageSet.isEmpty()) {
                             builder.newLine().newLine().escaped("Messages:");
-                            messageSet.forEach(m -> builder.newLine().escaped("- " + m.toString()));
+                            builder.newLine().code(
+                                    "[" +
+                                    messageSet.stream()
+                                            .map(NLModel::toJSON)
+                                            .collect(Collectors.joining(",\n"))
+                                    + "]");
                         }
                     } catch (SQLException ex) {
                         ex.printStackTrace();
@@ -117,7 +124,7 @@ public class GdprCommand implements CommandHandler {
                         Optional<SpotifyPlayingData> playingData = databaseController.getPlayingData(telegramUser);
                         if (playingData.isPresent()) {
                             builder.newLine().newLine().escaped("Playing Data:");
-                            builder.newLine().escaped(playingData.get().toString());
+                            builder.newLine().code(playingData.get().toJSON());
                         }
                     } catch (SQLException ex) {
                         ex.printStackTrace();
@@ -127,7 +134,7 @@ public class GdprCommand implements CommandHandler {
                         Optional<SpotifyUser> spotifyUser = databaseController.getSpotifyUser(telegramUser);
                         if (spotifyUser.isPresent()) {
                             builder.newLine().newLine().escaped("Spotify Data:");
-                            builder.newLine().escaped(spotifyUser.get().toString());
+                            builder.newLine().code(spotifyUser.get().toJSON());
                             builder.newLine().italics("Note: I also store an access and refresh token to access the Spotify API. These are hidden here as they are sensitive.");
                         }
                     } catch (SQLException ex) {

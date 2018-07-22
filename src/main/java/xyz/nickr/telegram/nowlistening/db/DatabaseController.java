@@ -11,12 +11,14 @@ import java.sql.SQLRecoverableException;
 import java.sql.Statement;
 import java.time.Instant;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import xyz.nickr.telegram.nowlistening.db.models.NowListeningMessage;
+import xyz.nickr.telegram.nowlistening.db.models.SpotifyPlayingData;
+import xyz.nickr.telegram.nowlistening.db.models.SpotifyUser;
 
 /**
  * @author Nick Robson

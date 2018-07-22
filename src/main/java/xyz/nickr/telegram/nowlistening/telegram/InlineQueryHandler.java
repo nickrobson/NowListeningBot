@@ -5,18 +5,13 @@ import com.jtelegram.api.events.EventHandler;
 import com.jtelegram.api.events.inline.InlineQueryEvent;
 import com.jtelegram.api.inline.InlineQuery;
 import com.jtelegram.api.inline.input.InputTextMessageContent;
-import com.jtelegram.api.inline.keyboard.InlineKeyboardButton;
-import com.jtelegram.api.inline.keyboard.InlineKeyboardMarkup;
-import com.jtelegram.api.inline.keyboard.InlineKeyboardRow;
 import com.jtelegram.api.inline.result.InlineResultArticle;
 import com.jtelegram.api.requests.inline.AnswerInlineQuery;
-import com.jtelegram.api.requests.message.framework.ParseMode;
-import com.jtelegram.api.util.TextBuilder;
 import java.util.Optional;
 import lombok.AllArgsConstructor;
 import xyz.nickr.telegram.nowlistening.db.DatabaseController;
-import xyz.nickr.telegram.nowlistening.db.SpotifyPlayingData;
-import xyz.nickr.telegram.nowlistening.db.SpotifyUser;
+import xyz.nickr.telegram.nowlistening.db.models.SpotifyPlayingData;
+import xyz.nickr.telegram.nowlistening.db.models.SpotifyUser;
 import xyz.nickr.telegram.nowlistening.spotify.SpotifyController;
 
 /**

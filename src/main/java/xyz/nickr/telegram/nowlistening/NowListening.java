@@ -27,7 +27,10 @@ import xyz.nickr.telegram.nowlistening.web.WebController;
 
 public class NowListening {
 
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    public static final Gson GSON = new GsonBuilder()
+            .setPrettyPrinting()
+            .excludeFieldsWithoutExposeAnnotation()
+            .create();
     private static final ScheduledExecutorService EXECUTOR = Executors.newScheduledThreadPool(4);
 
     public static void main(String[] args) throws IOException {

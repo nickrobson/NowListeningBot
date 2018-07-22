@@ -8,7 +8,7 @@ import java.sql.SQLException;
 import java.util.Set;
 import lombok.AllArgsConstructor;
 import xyz.nickr.telegram.nowlistening.db.DatabaseController;
-import xyz.nickr.telegram.nowlistening.db.SpotifyUser;
+import xyz.nickr.telegram.nowlistening.db.models.SpotifyUser;
 import xyz.nickr.telegram.nowlistening.spotify.SpotifyController;
 
 /**
