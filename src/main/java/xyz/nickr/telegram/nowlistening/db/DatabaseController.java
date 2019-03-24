@@ -10,12 +10,15 @@ import java.sql.SQLIntegrityConstraintViolationException;
 import java.sql.SQLRecoverableException;
 import java.sql.Statement;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalAmount;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import xyz.nickr.telegram.nowlistening.db.models.NowListeningMessage;
 import xyz.nickr.telegram.nowlistening.db.models.SpotifyPlayingData;
 import xyz.nickr.telegram.nowlistening.db.models.SpotifyUser;
@@ -24,6 +27,8 @@ import xyz.nickr.telegram.nowlistening.db.models.SpotifyUser;
  * @author Nick Robson
  */
 public class DatabaseController {
+
+    public static final TemporalAmount ENABLED_CUTOFF = ChronoUnit.DAYS.getDuration();
 
     private final String url;
     private Connection connection;
@@ -104,8 +109,26 @@ public class DatabaseController {
                                 "id INTEGER PRIMARY KEY," +
                                 "telegram_user INTEGER NOT NULL," +
                                 "inline_message_id STRING UNIQUE NOT NULL," +
-                                "time_added INTEGER NOT NULL" +
+                                "time_added INTEGER NOT NULL," +
+                                "enabled BOOLEAN NOT NULL DEFAULT 1," +
+                                "permanent BOOLEAN NOT NULL DEFAULT 0" +
                                 ")");
+                try {
+                    statement.execute("ALTER TABLE now_listening_messages " +
+                            "ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT 1");
+                } catch (SQLException ex) {
+                    if (!ex.getMessage().contains("duplicate column name")) {
+                        throw ex;
+                    }
+                }
+                try {
+                    statement.execute("ALTER TABLE now_listening_messages " +
+                            "ADD COLUMN permanent BOOLEAN NOT NULL DEFAULT 0");
+                } catch (SQLException ex) {
+                    if (!ex.getMessage().contains("duplicate column name")) {
+                        throw ex;
+                    }
+                }
             }
             return null;
         });
@@ -175,7 +198,7 @@ public class DatabaseController {
     public Optional<SpotifyUser> getSpotifyUser(long telegramUserId) throws SQLException {
         return withConnection(connection -> {
             try (PreparedStatement preparedStatement = connection.prepareStatement(
-                    "SELECT * FROM spotify_user WHERE telegram_user = ?"
+                    "SELECT * FROM spotify_user WHERE telegram_user = ? LIMIT 1"
             )) {
                 preparedStatement.setLong(1, telegramUserId);
 
@@ -195,7 +218,7 @@ public class DatabaseController {
                     "INSERT OR REPLACE INTO spotify_user " +
                             "(telegram_user, language_code, access_token, token_type, " +
                             "scope, expiry_date, refresh_token)" +
-                         "VALUES (?, ?, ?, ?, ?, ?, ?)"
+                            "VALUES (?, ?, ?, ?, ?, ?, ?)"
             )) {
                 preparedStatement.setLong(1, user.getTelegramUserId());
                 preparedStatement.setString(2, user.getLanguageCode());
@@ -288,7 +311,7 @@ public class DatabaseController {
     public Optional<SpotifyPlayingData> getPlayingData(long telegramUserId) throws SQLException {
         return withConnection(connection -> {
             try (PreparedStatement preparedStatement = connection.prepareStatement(
-                    "SELECT * FROM spotify_playing_data WHERE telegram_user = ?"
+                    "SELECT * FROM spotify_playing_data WHERE telegram_user = ? LIMIT 1"
             )) {
                 preparedStatement.setLong(1, telegramUserId);
 
@@ -347,31 +370,112 @@ public class DatabaseController {
                     "SELECT * FROM now_listening_messages WHERE telegram_user = ?"
             )) {
                 preparedStatement.setLong(1, telegramUserId);
+                return getAllMessages(preparedStatement);
+            }
+        });
+    }
 
-                Set<NowListeningMessage> messageSet = new LinkedHashSet<>();
+    public Set<NowListeningMessage> getEnabledNowListeningMessages(long telegramUserId) throws SQLException {
+        return withConnection(connection -> {
+            try (PreparedStatement preparedStatement = connection.prepareStatement(
+                    "SELECT * FROM now_listening_messages WHERE telegram_user = ? AND enabled = 1"
+            )) {
+                preparedStatement.setLong(1, telegramUserId);
+                return getAllMessages(preparedStatement);
+            }
+        });
+    }
+
+    private Set<NowListeningMessage> getAllMessages(PreparedStatement preparedStatement) throws SQLException {
+        Set<NowListeningMessage> messageSet = new LinkedHashSet<>();
+        try (ResultSet rs = preparedStatement.executeQuery()) {
+            while (rs.next()) {
+                messageSet.add(toMessage(rs));
+            }
+            return Collections.unmodifiableSet(messageSet);
+        }
+    }
+
+    public Optional<NowListeningMessage> getNowListeningMessage(long telegramUserId, String inlineMessageId) throws SQLException {
+        return withConnection(connection -> {
+            try (PreparedStatement preparedStatement = connection.prepareStatement(
+                    "SELECT * FROM now_listening_messages WHERE telegram_user = ? AND inline_message_id = ? LIMIT 1"
+            )) {
+                preparedStatement.setLong(1, telegramUserId);
+                preparedStatement.setString(2, inlineMessageId);
                 try (ResultSet rs = preparedStatement.executeQuery()) {
-                    while (rs.next()) {
-                        long storedTelegramUserId = rs.getLong("telegram_user");
-                        String inlineMessageId = rs.getString("inline_message_id");
-                        long timeAdded = rs.getLong("time_added");
-                        messageSet.add(new NowListeningMessage(storedTelegramUserId, inlineMessageId, timeAdded));
+                    if (rs.next()) {
+                        return Optional.of(toMessage(rs));
                     }
-                    return Collections.unmodifiableSet(messageSet);
+                    return Optional.empty();
                 }
             }
         });
     }
 
-    public void addNowListeningMessage(NowListeningMessage nowListeningMessage) throws SQLException {
+    private NowListeningMessage toMessage(ResultSet rs) throws SQLException {
+        long id = rs.getLong("id");
+        long telegramUserId = rs.getLong("telegram_user");
+        String inlineMessageId = rs.getString("inline_message_id");
+        long timeAdded = rs.getLong("time_added");
+        boolean enabled = rs.getBoolean("enabled");
+        return new NowListeningMessage(id, telegramUserId, inlineMessageId, timeAdded, enabled);
+    }
+
+    public Set<NowListeningMessage> getEnabledMessagesToBeDisabled() throws SQLException {
+        return withConnection(connection -> {
+            try (PreparedStatement preparedStatement = connection.prepareStatement(
+                    "SELECT * FROM now_listening_messages WHERE enabled = 1 AND time_added < ? AND permanent = 0"
+            )) {
+                preparedStatement.setLong(1, Instant.now().minus(ENABLED_CUTOFF).getEpochSecond());
+                return getAllMessages(preparedStatement);
+            }
+        });
+    }
+
+    public void enableMessage(NowListeningMessage nowListeningMessage) throws SQLException {
+        withConnection(connection -> {
+            try (PreparedStatement preparedStatement = connection.prepareStatement(
+                    "UPDATE now_listening_messages SET enabled = 1, time_added = ? " +
+                            "WHERE telegram_user = ? AND inline_message_id = ?"
+            )) {
+                preparedStatement.setLong(1, Instant.now().getEpochSecond());
+                preparedStatement.setLong(2, nowListeningMessage.getTelegramUserId());
+                preparedStatement.setString(3, nowListeningMessage.getInlineMessageId());
+                preparedStatement.execute();
+            }
+            return null;
+        });
+    }
+
+    public void disableMessages(Set<NowListeningMessage> messages) throws SQLException {
+        withConnection(connection -> {
+            try (PreparedStatement preparedStatement = connection.prepareStatement(
+                    "UPDATE now_listening_messages SET enabled = 0 " +
+                            "WHERE id in (" +
+                            messages.stream()
+                                    .mapToLong(NowListeningMessage::getId)
+                                    .mapToObj(Long::toString)
+                                    .collect(Collectors.joining(",")) +
+                            ")"
+            )) {
+                preparedStatement.execute();
+            }
+            return null;
+        });
+    }
+
+    public void addNowListeningMessage(long telegramUserId, String inlineMessageId, boolean permanent) throws SQLException {
         withConnection(connection -> {
             try (PreparedStatement preparedStatement = connection.prepareStatement(
                     "INSERT OR REPLACE INTO now_listening_messages " +
-                            "(telegram_user, inline_message_id, time_added) " +
-                            "VALUES (?, ?, ?)"
+                            "(telegram_user, inline_message_id, time_added, permanent) " +
+                            "VALUES (?, ?, ?, ?)"
             )) {
-                preparedStatement.setLong(1, nowListeningMessage.getTelegramUserId());
-                preparedStatement.setString(2, nowListeningMessage.getInlineMessageId());
-                preparedStatement.setLong(3, nowListeningMessage.getTimeAdded());
+                preparedStatement.setLong(1, telegramUserId);
+                preparedStatement.setString(2, inlineMessageId);
+                preparedStatement.setLong(3, Instant.now().getEpochSecond());
+                preparedStatement.setBoolean(4, permanent);
                 preparedStatement.execute();
             }
             return null;

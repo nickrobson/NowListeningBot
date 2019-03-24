@@ -15,8 +15,15 @@ import lombok.experimental.Wither;
 @Wither
 @Builder
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = false)
-@ToString(exclude = {"accessToken", "refreshToken"})
+@EqualsAndHashCode(
+        callSuper = false,
+        of = {
+                "telegramUserId",
+                "languageCode",
+                "tokenType",
+                "scope",
+                "expiryDate"
+        })
 public class SpotifyUser extends NLModel {
 
     @Expose private final long telegramUserId;

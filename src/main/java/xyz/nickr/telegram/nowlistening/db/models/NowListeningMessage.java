@@ -14,11 +14,15 @@ import lombok.experimental.Wither;
 @Wither
 @Builder
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = false)
+@EqualsAndHashCode(
+        callSuper = false,
+        of = {"telegramUserId", "inlineMessageId"})
 public class NowListeningMessage extends NLModel {
 
+    @Expose private final long id;
     @Expose private final long telegramUserId;
     @Expose private final String inlineMessageId;
     @Expose private final long timeAdded;
+    @Expose private final boolean enabled;
 
 }

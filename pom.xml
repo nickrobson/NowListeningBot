@@ -6,8 +6,12 @@
 
     <groupId>xyz.nickr.telegram</groupId>
     <artifactId>nowlisteningbot</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>NowListening</name>
+
+    <properties>
+        <jtelegram-version>4.0.1-SNAPSHOT</jtelegram-version>
+    </properties>
 
     <repositories>
         <repository>
@@ -20,12 +24,12 @@
         <dependency>
             <groupId>com.jtelegram</groupId>
             <artifactId>jtelegrambotapi-core</artifactId>
-            <version>3.6.3-SNAPSHOT</version>
+            <version>${jtelegram-version}</version>
         </dependency>
         <dependency>
             <groupId>com.jtelegram</groupId>
             <artifactId>jtelegrambotapi-menus</artifactId>
-            <version>3.6.3-SNAPSHOT</version>
+            <version>${jtelegram-version}</version>
         </dependency>
         <dependency>
             <groupId>org.xerial</groupId>

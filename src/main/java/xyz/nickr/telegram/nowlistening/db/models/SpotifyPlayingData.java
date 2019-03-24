@@ -14,7 +14,14 @@ import lombok.experimental.Wither;
 @Wither
 @Builder
 @AllArgsConstructor
-@EqualsAndHashCode(callSuper = false, exclude = "lastChecked")
+@EqualsAndHashCode(
+        callSuper = false,
+        of = {
+                "telegramUserId",
+                "lastTrackName",
+                "lastTrackArtist",
+                "playing"
+        })
 public class SpotifyPlayingData extends NLModel {
 
     @Expose private final long telegramUserId;

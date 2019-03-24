@@ -50,7 +50,7 @@ public class BroadcastCommand implements CommandHandler {
             event.getBot().perform(SendText.builder()
                     .chatId(command.getChat().getChatId())
                     .replyToMessageID(command.getBaseMessage().getMessageId())
-                    .text(TextBuilder.create().escaped(""))
+                    .text(TextBuilder.create().escaped("You need to specify a message to be broadcast."))
                     .build());
             return;
         }

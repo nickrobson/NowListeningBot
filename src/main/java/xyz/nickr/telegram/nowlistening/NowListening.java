@@ -20,6 +20,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import xyz.nickr.telegram.nowlistening.db.DatabaseController;
 import xyz.nickr.telegram.nowlistening.scheduler.AuthorisationRefresher;
+import xyz.nickr.telegram.nowlistening.scheduler.MessageDisabler;
 import xyz.nickr.telegram.nowlistening.scheduler.PlayingTrackRefresher;
 import xyz.nickr.telegram.nowlistening.spotify.SpotifyController;
 import xyz.nickr.telegram.nowlistening.telegram.TelegramController;
@@ -67,14 +68,14 @@ public class NowListening {
 
         EXECUTOR.scheduleWithFixedDelay(new AuthorisationRefresher(databaseController, spotifyController), 0L, 30L, TimeUnit.SECONDS);
         EXECUTOR.scheduleWithFixedDelay(new PlayingTrackRefresher(databaseController, spotifyController), 10L, 15L, TimeUnit.SECONDS);
+        EXECUTOR.scheduleWithFixedDelay(new MessageDisabler(telegramController), 0L, 1L, TimeUnit.MINUTES);
 
         webController.start();
         telegramController.start();
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            //noinspection Convert2MethodRef
-            webController.shutdown();
-        }, "NowListening Shutdown Thread"));
+        Runtime.getRuntime().addShutdownHook(new Thread(
+                webController::shutdown,
+                "NowListening Shutdown Thread"));
 
         while (true) {
             try {

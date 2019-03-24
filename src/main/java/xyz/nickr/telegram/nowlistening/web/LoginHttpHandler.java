@@ -32,13 +32,6 @@ public class LoginHttpHandler extends HttpHandler {
         String code = request.getParameter("code");
         String error = request.getParameter("error");
 
-        if (error != null) {
-            System.out.format(
-                    "%s %s:\n- state: %s\n- error: %s\n",
-                    request.getMethod(), request.getContextPath(),
-                    state, error);
-        }
-
         if (state == null || (code == null && error == null)) {
             response.sendError(400, "Invalid request");
             return;

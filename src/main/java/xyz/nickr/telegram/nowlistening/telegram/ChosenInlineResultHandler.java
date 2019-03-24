@@ -3,10 +3,8 @@ package xyz.nickr.telegram.nowlistening.telegram;
 import com.jtelegram.api.events.EventHandler;
 import com.jtelegram.api.events.inline.ChosenInlineResultEvent;
 import com.jtelegram.api.inline.result.ChosenInlineResult;
-import java.time.Instant;
 import lombok.AllArgsConstructor;
 import xyz.nickr.telegram.nowlistening.db.DatabaseController;
-import xyz.nickr.telegram.nowlistening.db.models.NowListeningMessage;
 
 /**
  * @author Nick Robson
@@ -21,13 +19,16 @@ public class ChosenInlineResultHandler implements EventHandler<ChosenInlineResul
     public void onEvent(ChosenInlineResultEvent event) {
         try {
             ChosenInlineResult result = event.getChosenResult();
-            long telegramUserId = result.getFrom().getId();
             String resultId = result.getResultId();
-            String messageId = result.getInlineMessageId();
 
-            if (TelegramController.NOW_LISTENING_MSG_UPDATE_ID.equals(resultId)) {
-                databaseController.addNowListeningMessage(new NowListeningMessage(telegramUserId, messageId, Instant.now().getEpochSecond()));
-                telegramController.updateNowListeningMessages(telegramUserId);
+            boolean permanent = TelegramController.NOW_LISTENING_MSG_UPDATE_FOREVER_ID.equals(resultId);
+            boolean isAutoUpdate = permanent || TelegramController.NOW_LISTENING_MSG_UPDATE_ONE_DAY_ID.equals(resultId);
+
+            if (isAutoUpdate) {
+                long telegramUserId = result.getFrom().getId();
+                String messageId = result.getInlineMessageId();
+                databaseController.addNowListeningMessage(telegramUserId, messageId, permanent);
+                telegramController.updateEnabledNowListeningMessages(telegramUserId);
             }
         } catch (Exception ex) {
             ex.printStackTrace();
