@@ -66,12 +66,12 @@ public class NowListening {
         TelegramController telegramController = new TelegramController(config, databaseController, spotifyController);
         WebController webController = new WebController(config, databaseController, spotifyController, telegramController);
 
-        EXECUTOR.scheduleWithFixedDelay(new AuthorisationRefresher(databaseController, spotifyController), 0L, 30L, TimeUnit.SECONDS);
-        EXECUTOR.scheduleWithFixedDelay(new PlayingTrackRefresher(databaseController, spotifyController), 10L, 15L, TimeUnit.SECONDS);
-        EXECUTOR.scheduleWithFixedDelay(new MessageDisabler(telegramController), 0L, 1L, TimeUnit.MINUTES);
-
         webController.start();
-        telegramController.start();
+        telegramController.start(() -> {
+            EXECUTOR.scheduleWithFixedDelay(new AuthorisationRefresher(databaseController, spotifyController), 0L, 30L, TimeUnit.SECONDS);
+            EXECUTOR.scheduleWithFixedDelay(new PlayingTrackRefresher(databaseController, spotifyController), 0L, 15L, TimeUnit.SECONDS);
+            EXECUTOR.scheduleWithFixedDelay(new MessageDisabler(telegramController), 0L, 1L, TimeUnit.MINUTES);
+        });
 
         Runtime.getRuntime().addShutdownHook(new Thread(
                 webController::shutdown,

@@ -58,7 +58,7 @@ public class TelegramController {
         this.spotifyController = spotifyController;
     }
 
-    public void start() {
+    public void start(Runnable onReady) {
         TelegramBotRegistry registry = TelegramBotRegistry.builder()
                 .updateProvider(new PollingUpdateProvider())
                 .build();
@@ -82,6 +82,8 @@ public class TelegramController {
             )));
 
             this.spotifyController.addListener(playingData -> updateEnabledNowListeningMessages(playingData.getTelegramUserId()));
+
+            onReady.run();
         });
     }
 
