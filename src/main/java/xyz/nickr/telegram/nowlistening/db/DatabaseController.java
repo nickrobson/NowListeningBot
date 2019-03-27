@@ -219,7 +219,6 @@ public class DatabaseController {
                             "(telegram_user, language_code, access_token, token_type, " +
                             "scope, expiry_date, refresh_token) " +
                             "VALUES (?, ?, ?, ?, ?, ?, ?) " +
-
                             "ON CONFLICT (telegram_user) DO UPDATE SET " +
                             "language_code = ?, access_token = ?, token_type = ?, " +
                             "scope = ?, expiry_date = ?, refresh_token = ? " +
