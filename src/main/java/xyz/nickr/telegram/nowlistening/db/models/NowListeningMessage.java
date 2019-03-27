@@ -19,7 +19,7 @@ import lombok.experimental.Wither;
         of = {"telegramUserId", "inlineMessageId"})
 public class NowListeningMessage extends NLModel {
 
-    @Expose private final long id;
+    private final long id;
     @Expose private final long telegramUserId;
     @Expose private final String inlineMessageId;
     @Expose private final long timeAdded;
