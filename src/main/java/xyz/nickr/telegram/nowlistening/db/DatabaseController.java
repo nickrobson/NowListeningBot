@@ -215,10 +215,15 @@ public class DatabaseController {
     public void updateSpotifyUser(SpotifyUser user) throws SQLException {
         withConnection(connection -> {
             try (PreparedStatement preparedStatement = connection.prepareStatement(
-                    "INSERT OR REPLACE INTO spotify_user " +
+                    "INSERT INTO spotify_user " +
                             "(telegram_user, language_code, access_token, token_type, " +
-                            "scope, expiry_date, refresh_token)" +
-                            "VALUES (?, ?, ?, ?, ?, ?, ?)"
+                            "scope, expiry_date, refresh_token) " +
+                            "VALUES (?, ?, ?, ?, ?, ?, ?) " +
+
+                            "ON CONFLICT (telegram_user) DO UPDATE SET " +
+                            "language_code = ?, access_token = ?, token_type = ?, " +
+                            "scope = ?, expiry_date = ?, refresh_token = ? " +
+                            "WHERE excluded.expiry_date > spotify_user.expiry_date"
             )) {
                 preparedStatement.setLong(1, user.getTelegramUserId());
                 preparedStatement.setString(2, user.getLanguageCode());
@@ -227,6 +232,13 @@ public class DatabaseController {
                 preparedStatement.setString(5, user.getScope());
                 preparedStatement.setLong(6, user.getExpiryDate());
                 preparedStatement.setString(7, user.getRefreshToken());
+
+                preparedStatement.setString(8, user.getLanguageCode());
+                preparedStatement.setString(9, user.getAccessToken());
+                preparedStatement.setString(10, user.getTokenType());
+                preparedStatement.setString(11, user.getScope());
+                preparedStatement.setLong(12, user.getExpiryDate());
+                preparedStatement.setString(13, user.getRefreshToken());
                 preparedStatement.execute();
             }
             return null;

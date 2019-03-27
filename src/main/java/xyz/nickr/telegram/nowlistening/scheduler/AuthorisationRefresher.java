@@ -33,7 +33,7 @@ public class AuthorisationRefresher implements Runnable {
                             .authorizationCodeRefresh().build().execute();
 
                     spotifyController.updateSpotifyUser(user.getTelegramUserId(), credentials);
-                    System.out.format("[NowListening] Refreshed tokens for %d.", user.getTelegramUserId());
+                    System.out.format("[NowListening] Refreshed tokens for %d.\n", user.getTelegramUserId());
                 } catch (SQLException | SpotifyWebApiException | IOException ex) {
                     ex.printStackTrace();
                 }
