@@ -19,7 +19,7 @@ public class WebController {
         JsonObject web = config.getAsJsonObject("webserver");
         int port = web.getAsJsonPrimitive("port").getAsInt();
 
-        this.server = HttpServer.createSimpleServer(null, port);
+        this.server = HttpServer.createSimpleServer(null, "127.0.0.1", port);
 
         ServerConfiguration webConfig = server.getServerConfiguration();
         webConfig.addHttpHandler(new LoginHttpHandler(spotifyController, databaseController, telegramController), "/login");
