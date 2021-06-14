@@ -10,7 +10,6 @@
     <name>NowListening</name>
 
     <properties>
-        <jtelegram-version>4.0.10</jtelegram-version>
         <java.version>16</java.version>
         <maven.compiler.source>16</maven.compiler.source>
         <maven.compiler.target>16</maven.compiler.target>
@@ -18,14 +17,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.jtelegram</groupId>
-            <artifactId>jtelegrambotapi-core</artifactId>
-            <version>${jtelegram-version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.jtelegram</groupId>
-            <artifactId>jtelegrambotapi-menus</artifactId>
-            <version>${jtelegram-version}</version>
+            <groupId>com.github.pengrad</groupId>
+            <artifactId>java-telegram-bot-api</artifactId>
+            <version>5.1.0</version>
         </dependency>
         <dependency>
             <groupId>org.xerial</groupId>

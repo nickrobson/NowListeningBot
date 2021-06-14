@@ -1,11 +1,12 @@
 package xyz.nickr.telegram.nowlistening.telegram;
 
-import com.jtelegram.api.events.EventHandler;
-import com.jtelegram.api.events.inline.keyboard.CallbackQueryEvent;
-import java.sql.SQLException;
+import com.pengrad.telegrambot.TelegramBot;
+import com.pengrad.telegrambot.model.CallbackQuery;
 import lombok.AllArgsConstructor;
 import xyz.nickr.telegram.nowlistening.db.DatabaseController;
-import xyz.nickr.telegram.nowlistening.db.models.NowListeningMessage;
+import xyz.nickr.telegram.nowlistening.telegram.commands.GdprCommand;
+
+import java.sql.SQLException;
 
 import static xyz.nickr.telegram.nowlistening.telegram.TelegramController.CONTINUE_GETTING_UPDATES;
 
@@ -13,17 +14,17 @@ import static xyz.nickr.telegram.nowlistening.telegram.TelegramController.CONTIN
  * @author Nick Robson
  */
 @AllArgsConstructor
-public class CallbackQueryHandler implements EventHandler<CallbackQueryEvent> {
+public class CallbackQueryHandler {
 
     private final DatabaseController databaseController;
     private final TelegramController telegramController;
+    private final GdprCommand gdprCommand;
 
-    @Override
-    public void onEvent(CallbackQueryEvent event) {
+    public void onCallbackQuery(CallbackQuery callbackQuery) {
         try {
-            if (CONTINUE_GETTING_UPDATES.equals(event.getQuery().getData())) {
-                long telegramUserId = event.getQuery().getFrom().getId();
-                String inlineMessageId = event.getQuery().getInlineMessageId();
+            long telegramUserId = callbackQuery.from().id();
+            if (CONTINUE_GETTING_UPDATES.equals(callbackQuery.data())) {
+                String inlineMessageId = callbackQuery.inlineMessageId();
                 databaseController.getNowListeningMessage(telegramUserId, inlineMessageId)
                     .ifPresent(message -> {
                         try {
@@ -33,6 +34,9 @@ public class CallbackQueryHandler implements EventHandler<CallbackQueryEvent> {
                             ex.printStackTrace();
                         }
                     });
+            }
+            if (callbackQuery.data() != null && callbackQuery.data().startsWith("gdpr/")) {
+                gdprCommand.handleButtonClick(telegramUserId, callbackQuery.message(), callbackQuery.data());
             }
         } catch (Exception ex) {
             ex.printStackTrace();

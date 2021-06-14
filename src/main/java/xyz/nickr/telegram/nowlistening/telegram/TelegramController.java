@@ -1,36 +1,34 @@
 package xyz.nickr.telegram.nowlistening.telegram;
 
 import com.google.gson.JsonObject;
-import com.jtelegram.api.TelegramBot;
-import com.jtelegram.api.TelegramBotRegistry;
-import com.jtelegram.api.chat.ChatType;
-import com.jtelegram.api.commands.filters.ChatTypeFilter;
-import com.jtelegram.api.commands.filters.MentionFilter;
-import com.jtelegram.api.commands.filters.TextFilter;
-import com.jtelegram.api.events.inline.ChosenInlineResultEvent;
-import com.jtelegram.api.events.inline.InlineQueryEvent;
-import com.jtelegram.api.events.inline.keyboard.CallbackQueryEvent;
-import com.jtelegram.api.ex.TelegramException;
-import com.jtelegram.api.inline.keyboard.InlineKeyboardButton;
-import com.jtelegram.api.inline.keyboard.InlineKeyboardMarkup;
-import com.jtelegram.api.inline.keyboard.InlineKeyboardRow;
-import com.jtelegram.api.menu.events.UnregisteredMenuInteractionEvent;
-import com.jtelegram.api.requests.message.edit.EditTextMessage;
-import com.jtelegram.api.update.PollingUpdateProvider;
 import com.jtelegram.api.util.TextBuilder;
-import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Consumer;
+import com.pengrad.telegrambot.TelegramBot;
+import com.pengrad.telegrambot.TelegramException;
+import com.pengrad.telegrambot.UpdatesListener;
+import com.pengrad.telegrambot.model.Chat;
+import com.pengrad.telegrambot.model.Message;
+import com.pengrad.telegrambot.model.Update;
+import com.pengrad.telegrambot.model.request.InlineKeyboardButton;
+import com.pengrad.telegrambot.model.request.InlineKeyboardMarkup;
+import com.pengrad.telegrambot.model.request.ParseMode;
+import com.pengrad.telegrambot.request.EditMessageText;
+import com.pengrad.telegrambot.request.GetMe;
+import com.pengrad.telegrambot.request.SendMessage;
+import com.pengrad.telegrambot.response.GetMeResponse;
 import lombok.Getter;
 import xyz.nickr.telegram.nowlistening.db.DatabaseController;
 import xyz.nickr.telegram.nowlistening.db.models.NowListeningMessage;
 import xyz.nickr.telegram.nowlistening.db.models.SpotifyPlayingData;
 import xyz.nickr.telegram.nowlistening.spotify.SpotifyController;
-import xyz.nickr.telegram.nowlistening.telegram.commands.BroadcastCommand;
 import xyz.nickr.telegram.nowlistening.telegram.commands.GdprCommand;
 import xyz.nickr.telegram.nowlistening.telegram.commands.StartCommand;
+
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * @author Nick Robson
@@ -49,6 +47,8 @@ public class TelegramController {
 
     @Getter
     private volatile TelegramBot bot;
+    @Getter
+    private volatile String botUsername;
 
     public TelegramController(JsonObject config, DatabaseController databaseController, SpotifyController spotifyController) {
         JsonObject tg = config.getAsJsonObject("telegram");
@@ -59,57 +59,90 @@ public class TelegramController {
     }
 
     public void start(Runnable onReady) {
-        TelegramBotRegistry registry = TelegramBotRegistry.builder()
-                .updateProvider(new PollingUpdateProvider())
-                .build();
+        this.bot = new TelegramBot(apiKey);
 
-        registry.registerBot(apiKey, (bot, err) -> {
-            if (err != null) {
-                throw new RuntimeException("Failed to login to Telegram", err);
+        try {
+            GetMeResponse response = this.bot.execute(new GetMe());
+            if (!response.isOk()) {
+                throw new RuntimeException("Failed to login to Telegram with error code: " + response.errorCode());
             }
-            System.out.format("[NowListening] Logged in as @%s\n", bot.getBotInfo().getUsername());
+            this.botUsername = response.user().username();
+            System.out.format("[NowListening] Logged in as @%s\n", this.botUsername);
+        } catch (Exception ex) {
+            throw new RuntimeException("Failed to login to Telegram", ex);
+        }
 
-            this.bot = bot;
-            this.bot.getEventRegistry().registerEvent(InlineQueryEvent.class, new InlineQueryHandler(databaseController, spotifyController, this));
-            this.bot.getEventRegistry().registerEvent(ChosenInlineResultEvent.class, new ChosenInlineResultHandler(databaseController, this));
-            this.bot.getEventRegistry().registerEvent(CallbackQueryEvent.class, new CallbackQueryHandler(databaseController, this));
-            this.bot.getEventRegistry().registerEvent(UnregisteredMenuInteractionEvent.class, e -> System.out.println(e.toString()));
-            this.bot.getCommandRegistry().registerCommand(new MentionFilter(
-                    new ChatTypeFilter(ChatType.PRIVATE,
-                            new TextFilter("start", false, new StartCommand(databaseController, spotifyController)),
-                            new TextFilter("gdpr", false, new GdprCommand(databaseController)),
-                            new TextFilter("broadcast", false, new BroadcastCommand(databaseController))
-            )));
+        StartCommand startCommand = new StartCommand(databaseController, spotifyController);
+        GdprCommand gdprCommand = new GdprCommand(databaseController, this);
 
-            this.spotifyController.addListener(playingData -> updateEnabledNowListeningMessages(playingData.getTelegramUserId()));
+        InlineQueryHandler inlineQueryHandler = new InlineQueryHandler(databaseController, spotifyController, this);
+        ChosenInlineResultHandler chosenInlineResultHandler = new ChosenInlineResultHandler(databaseController, this);
+        CallbackQueryHandler callbackQueryHandler = new CallbackQueryHandler(databaseController, this, gdprCommand);
 
-            onReady.run();
-        });
+        this.bot.setUpdatesListener(updates -> {
+            try {
+                for (Update update : updates) {
+                    if (update.inlineQuery() != null) {
+                        inlineQueryHandler.onInlineQuery(bot, update.inlineQuery());
+                    }
+                    if (update.chosenInlineResult() != null) {
+                        chosenInlineResultHandler.onChosenInlineResult(update.chosenInlineResult());
+                    }
+                    if (update.callbackQuery() != null) {
+                        callbackQueryHandler.onCallbackQuery(update.callbackQuery());
+                    }
+                    if (update.message() != null && update.message().text() != null) {
+                        Message message = update.message();
+                        if (message.chat().type() != Chat.Type.Private)
+                            continue;
+                        String text = message.text();
+                        if (!text.startsWith("/"))
+                            continue;
+                        String[] commandWords = text.split("\s+");
+                        String[] commandParts = commandWords[0].split("@", 2);
+                        String command = commandParts[0].toLowerCase(Locale.ENGLISH);
+                        if ("/start".equals(command)) {
+                            startCommand.onCommand(bot, message);
+                        } else if ("/gdpr".equals(command)) {
+                            gdprCommand.onCommand(bot, message);
+                        } else {
+                            bot.execute(new SendMessage(message.chat().id(), "Unknown command"));
+                        }
+                    }
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+            return UpdatesListener.CONFIRMED_UPDATES_ALL;
+        }, Throwable::printStackTrace);
+
+        this.spotifyController.addListener(playingData -> updateEnabledNowListeningMessages(playingData.getTelegramUserId()));
+
+        onReady.run();
     }
 
     public void updateMessage(NowListeningMessage message) throws SQLException {
         SpotifyPlayingData playingData = databaseController.getPlayingData(message.getTelegramUserId()).orElse(null);
-        this.bot.perform(EditTextMessage.builder()
-                .text(getMessage(playingData))
-                .replyMarkup(getKeyboard(playingData))
-                .disableWebPagePreview(true)
-                .inlineMessageId(message.getInlineMessageId())
-                .errorHandler(onError(message))
-                .build());
+        this.bot.execute(
+                new EditMessageText(message.getInlineMessageId(), getMessage(playingData).toHtml())
+                        .parseMode(ParseMode.HTML)
+                        .replyMarkup(getKeyboard(playingData))
+                        .disableWebPagePreview(true)
+        );
     }
 
     public void updateEnabledNowListeningMessages(long telegramUserId) throws SQLException {
         SpotifyPlayingData playingData = databaseController.getPlayingData(telegramUserId).orElse(null);
 
-        EditTextMessage.EditTextMessageBuilder messageBuilder = EditTextMessage.builder()
-                .text(getMessage(playingData))
-                .replyMarkup(getKeyboard(playingData))
-                .disableWebPagePreview(true);
-
         Set<NowListeningMessage> messageSet = databaseController.getEnabledNowListeningMessages(telegramUserId);
         for (NowListeningMessage message : messageSet) {
             try {
-                perform(messageBuilder, message);
+                bot.execute(
+                        new EditMessageText(message.getInlineMessageId(), getMessage(playingData).toHtml())
+                                .parseMode(ParseMode.HTML)
+                                .replyMarkup(getKeyboard(playingData))
+                                .disableWebPagePreview(true)
+                );
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
@@ -118,22 +151,16 @@ public class TelegramController {
 
     public int updateDisabledNowListeningMessages() throws SQLException {
         Set<NowListeningMessage> messageSet = databaseController.getEnabledMessagesToBeDisabled();
-        Map<Long, EditTextMessage.EditTextMessageBuilder> messageBuilderMap = new HashMap<>();
         for (NowListeningMessage message : messageSet) {
             try {
                 long telegramUserId = message.getTelegramUserId();
-                EditTextMessage.EditTextMessageBuilder messageBuilder = messageBuilderMap.get(telegramUserId);
-                if (messageBuilder == null) {
-                    SpotifyPlayingData playingData = databaseController.getPlayingData(telegramUserId).orElse(null);
+                SpotifyPlayingData playingData = databaseController.getPlayingData(telegramUserId).orElse(null);
 
-                    messageBuilder = EditTextMessage.builder()
-                            .text(getMessage(playingData, false))
-                            .replyMarkup(getKeyboard(playingData, false))
-                            .disableWebPagePreview(true);
-
-                    messageBuilderMap.put(telegramUserId, messageBuilder);
-                }
-                perform(messageBuilder, message);
+                bot.execute(
+                        new EditMessageText(message.getInlineMessageId(), getMessage(playingData, false).toHtml())
+                                .replyMarkup(getKeyboard(playingData, false))
+                                .disableWebPagePreview(true)
+                );
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
@@ -142,24 +169,17 @@ public class TelegramController {
         return messageSet.size();
     }
 
-    private void perform(EditTextMessage.EditTextMessageBuilder messageBuilder, NowListeningMessage message) {
-        this.bot.perform(messageBuilder
-                .inlineMessageId(message.getInlineMessageId())
-                .errorHandler(onError(message))
-                .build());
-    }
-
     private Consumer<TelegramException> onError(NowListeningMessage message) {
         return err -> {
             if (err != null) {
-                if (err.getDescription() != null) {
-                    if (err.getDescription().contains("MESSAGE_ID_INVALID")) {
+                if (err.response().description() != null) {
+                    if (err.response().description().contains("MESSAGE_ID_INVALID")) {
                         try {
                             databaseController.deleteNowListeningMessage(message);
                         } catch (SQLException ex) {
                             ex.printStackTrace();
                         }
-                    } else if (err.getDescription().contains("message is not modified")) {
+                    } else if (err.response().description().contains("message is not modified")) {
                         // we just suppress these...
                     } else {
                         err.printStackTrace();
@@ -211,33 +231,28 @@ public class TelegramController {
     }
 
     public InlineKeyboardMarkup getKeyboard(SpotifyPlayingData track, boolean enabled) {
-        InlineKeyboardRow.InlineKeyboardRowBuilder rowBuilder = InlineKeyboardRow.builder();
-
+        List<InlineKeyboardButton> mainRow = new ArrayList<>();
         if (track != null) {
-            rowBuilder.button(InlineKeyboardButton.builder()
-                    .label("Open in Spotify")
-                    .url(track.getLastTrackUrl())
-                    .build());
+            mainRow.add(
+                    new InlineKeyboardButton("Open in Spotify").url(track.getLastTrackUrl())
+            );
         }
 
-        InlineKeyboardMarkup.InlineKeyboardMarkupBuilder builder =
-                InlineKeyboardMarkup.builder()
-                        .keyboard(rowBuilder
-                                .button(InlineKeyboardButton.builder()
-                                        .label("Share your music!")
-                                        .switchInlineQuery("")
-                                        .build())
-                                .build());
+        mainRow.add(
+                new InlineKeyboardButton("Share your music!").switchInlineQuery("")
+        );
 
-        if (!enabled) {
-            builder.keyboard(InlineKeyboardRow.builder()
-                    .button(InlineKeyboardButton.builder()
-                            .label("Continue getting updates")
-                            .callbackData(CONTINUE_GETTING_UPDATES)
-                            .build())
-                    .build());
+        if (enabled) {
+            return new InlineKeyboardMarkup(
+                    mainRow.toArray(new InlineKeyboardButton[0])
+            );
         }
 
-        return builder.build();
+        return new InlineKeyboardMarkup(
+                mainRow.toArray(new InlineKeyboardButton[0]),
+                new InlineKeyboardButton[]{
+                        new InlineKeyboardButton("Continue getting updates").callbackData(CONTINUE_GETTING_UPDATES)
+                }
+        );
     }
 }
